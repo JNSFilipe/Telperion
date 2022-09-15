@@ -1,5 +1,6 @@
 import numpy as np
 
+from tqdm import tqdm
 class HeartWood:
 	def __init__(self, num_feat, lr=0.1):
 		self.lr = lr
@@ -73,10 +74,11 @@ class HeartWood:
 		y_hat = self.forward(x)
 		return np.mean(y_hat==y)
 		
-	def fit(self, x, y, batch_size, epochs):
+	def fit(self, x, y, batch_size=128, epochs=50):
 		epoch_loss = []
 		epoch_accuracy = []
-		for epoch in np.arange(0, epochs):
+		pbar = tqdm(np.arange(0, epochs))
+		for epoch in pbar:
 			batch_loss = []
 			batch_accuracy = []
 			
@@ -90,4 +92,5 @@ class HeartWood:
 				
 			epoch_loss.append(np.array(batch_loss).mean())
 			epoch_accuracy.append(np.array(batch_accuracy).mean())
-			print("Epoch {}: Loss: {:.6f} Accuracy: {:.2f}".format(epoch+1, epoch_loss[-1], epoch_accuracy[-1]*100))
+			# print("Epoch {}: Loss: {:.6f} Accuracy: {:.2f}".format(epoch+1, epoch_loss[-1], epoch_accuracy[-1]*100))
+			pbar.set_description("E: {} | L: {:.6f} | A: {:.2f}\% ||".format(epoch+1, epoch_loss[-1], epoch_accuracy[-1]*100))
