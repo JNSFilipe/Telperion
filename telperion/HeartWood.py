@@ -7,6 +7,9 @@ class HeartWood:
 		
 		self.W = np.random.randn(num_feat, 1) * np.sqrt(1./1)
 		self.k = np.random.normal()
+
+		self.true_branch   = lambda: 1
+		self.false_branch  = lambda: 0
 		
 	def f(self, x, derivative=False):
 		if derivative=='W':
@@ -20,8 +23,12 @@ class HeartWood:
 			y = self.__tanh(np.dot(x, self.W) - self.k, derivative=False)
 		return y
 		
-	def forward(self, x):
+	def fastforward(self, x):
 		return np.squeeze((np.dot(x, self.W) > self.k).astype(float))
+
+	def forward(self, x):
+		y_hat = self.fastforward(x)
+		return np.array([self.true_branch() if i==1 else self.false_branch() for i in y_hat])
 		
 	def __next_batch(self, x, y, batchSize):
 		for i in np.arange(0, x.shape[0], batchSize):

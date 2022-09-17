@@ -2,67 +2,80 @@ import numpy as np
 
 from HeartWood import HeartWood
 
-class CrossEntropy:
-    def __init__(self):
-        pass
-
-    def loss(self, y, p):
-        # Avoid division by zero
-        p = np.clip(p, 1e-15, 1 - 1e-15)
-        return - y * np.log(p) - (1 - y) * np.log(1 - p)
-
-    def gradient(self, y, p):
-        # Avoid division by zero
-        p = np.clip(p, 1e-15, 1 - 1e-15)
-        return - (y / p) + (1 - y) / (1 - p)
-    
-
 class SapWood:
-  def __init__(self, num_feat, n_estimators=5, lr=0.1, zero=0, one=1):
+  def __init__(self, min_samples_split=2, max_depth=5):
+    self.min_samples_split = min_samples_split
+    self.max_depth = max_depth
 
-    self.estimators = [HeartWood(num_feat) for _ in range(n_estimators)]
+    self.root = None
 
-    self.loss = CrossEntropy()
+  def __info_metrics(self, y, metric='gini'):
+    p = y.sum()/len(y)
+    if metric == 'gini':
+      gini = 1-np.sum(p**2)
+      return gini
+    if metric == 'entropy':
+      entropy = np.sum(-p*np.log2(p+1e-9))
+      return entropy
 
-    self.learning_rate = lr
-    self.n_estimators = n_estimators
-    self.estimators = [HeartWood(num_feat) for _ in range(n_estimators)]
-
-  def __initial_guess(self, y):
-    log_odds = np.log(len(y)/y.sum())
-    return np.exp(log_odds)/(np.exp(log_odds) + 1)
-
+  def __impurity(self, trues, falses, metric='gini'):
+    wt = len(trues) / (len(trues)+len(falses))
+    wf = len(falses) / (len(trues)+len(falses))
     
-  def fit(self, x, y):
-    y_pred = np.full(np.shape(y), np.mean(y, axis=0))
-    for i in range(self.n_estimators):
-        gradient = self.loss.gradient(y, y_pred)
-        self.estimators[i].fit(x, gradient)
-        update = self.estimators[i].f(x)
-        # Update y prediction
-        y_pred -= np.squeeze(np.multiply(self.learning_rate, update))
+    return (wt * self.__info_metrics(trues, metric=metric) + wf * self.__info_metrics(falses, metric=metric))
 
-    
-  def predict(self, x):
-    pass
-    # y_hat = self.__heartwood(x)
-    
-    # if y_hat == 0:
-    # 	return self.zero
-    # else:
-    # 	return self.one
+  def __sow(self, x, y, curr_depth=0, prev_impurity=5000, metric='gini'):
+    n_rows, n_cols = x.shape
+        
+    # Check to see if a node should be leaf node
+    if n_rows >= self.min_samples_split and curr_depth <= self.max_depth:
+      # Create and train new node
+      node = HeartWood(n_cols)
+      node.fit(x, y)
+      y_hat = node.fastforward(x)
+      y_hat_idx = y_hat.astype(bool)
+
+      curr_impurity = self.__impurity(y[y_hat_idx], y[~y_hat_idx], metric=metric)
+      # If the split isn't pure
+      if prev_impurity-curr_impurity > 0:
+
+        # Build a tree on the left
+        node.true_branch = self.__sow(
+            x[y_hat_idx,:], 
+            y[y_hat_idx],
+            prev_impurity=curr_impurity,
+            curr_depth = curr_depth + 1
+        )
+        node.false_branch = self.__sow(
+            x[~y_hat_idx,:], 
+            y[~y_hat_idx],
+            prev_impurity=curr_impurity,
+            ccurr_depth=curr_depth + 1
+        )
+
+        return node
+
+  def fit(self, x, y, metric='gini'):
+    self.root = self.__sow(x, y, metric='gini')
+
 
 if __name__ == '__main__':
-    from sklearn.ensemble import GradientBoostingClassifier
-    from sklearn.metrics import accuracy_score
 
-    x = np.random.uniform(low=0, high=1, size=(50000,5))
-    y = np.array([1 if (j-0.5)**2 + (i-0.5)**2 < 0.2 else 0 for i, j in zip(x[:,0],x[:,1])])
+  x = np.random.uniform(low=0, high=1, size=(50000,5))
+  y = np.array([1 if (j-0.5)**2 + (i-0.5)**2 < 0.2 else 0 for i, j in zip(x[:,0],x[:,1])])
 
-    sw = SapWood(x.shape[1], n_estimators=50, lr=0.2)
+  x = np.array([
+      [1, 12, 0],
+      [1, 87, 1],
+      [0, 44, 0],
+      [1, 19, 2],
+      [0, 32, 1],
+      [0, 14, 0],
+    ])
+  y = np.array([1, 1, 0, 0, 1, 1])
 
-    sw.fit(x, y)
+  x = np.random.uniform(low=0, high=1, size=(50000,5))
+  y = np.array([1 if j < i - 0 else 0 for i, j in zip(x[:,0],x[:,1])])
 
-    m = GradientBoostingClassifier(n_estimators=50)
-    m.fit(x,y)
-    print(accuracy_score(m.predict(x), y))
+  sw = SapWood()
+  sw.fit(x,y)
