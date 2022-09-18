@@ -9,20 +9,20 @@ class SapWood:
 
     self.root = None
 
-  def __info_metrics(self, y, metric='gini'):
-    p = y.sum()/len(y)
-    if metric == 'gini':
-      gini = 1-np.sum(p**2)
-      return gini
-    if metric == 'entropy':
-      entropy = np.sum(-p*np.log2(p+1e-9))
-      return entropy
+  # def __info_metrics(self, y, metric='gini'):
+  #   p = y.sum()/len(y)
+  #   if metric == 'gini':
+  #     gini = 1-np.sum(p**2)
+  #     return gini
+  #   if metric == 'entropy':
+  #     entropy = np.sum(-p*np.log2(p+1e-9))
+  #     return entropy
 
-  def __impurity(self, trues, falses, metric='gini'):
-    wt = len(trues) / (len(trues)+len(falses))
-    wf = len(falses) / (len(trues)+len(falses))
+  # def __impurity(self, trues, falses, metric='gini'):
+  #   wt = len(trues) / (len(trues)+len(falses))
+  #   wf = len(falses) / (len(trues)+len(falses))
     
-    return (wt * self.__info_metrics(trues, metric=metric) + wf * self.__info_metrics(falses, metric=metric))
+  #   return (wt * self.__info_metrics(trues, metric=metric) + wf * self.__info_metrics(falses, metric=metric))
 
   def __sow(self, x, y, curr_depth=0, prev_impurity=5000, metric='gini'):
     n_rows, n_cols = x.shape
@@ -35,7 +35,7 @@ class SapWood:
       y_hat = node.fastforward(x)
       y_hat_idx = y_hat.astype(bool)
 
-      curr_impurity = self.__impurity(y[y_hat_idx], y[~y_hat_idx], metric=metric)
+      curr_impurity = node._impurity(y[y_hat_idx], y[~y_hat_idx], metric=metric)
       # If the split isn't pure
       if prev_impurity-curr_impurity > 0:
 
