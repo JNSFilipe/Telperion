@@ -2,16 +2,20 @@ import numpy as np
 
 from tqdm import tqdm
 class HeartWood:
-  def __init__(self, num_feat, lr=0.1):
+  def __init__(self, num_feat, lr=0.1, leaf=True):
     self.lr = lr
     
     self.W = np.random.randn(num_feat, 1) * np.sqrt(1./1)
     self.k = np.random.normal()
 
-    self.true_branch   = lambda: 1
-    self.false_branch  = lambda: 0
+    self.true_branch   = lambda x: 1
+    self.false_branch  = lambda x: 0
 
+    self.leaf = leaf
     self.multidim = True
+
+  def __call__(self, x):
+    return self.forward(x)
 
   ## Mathematical rewrite of a tree
   def f(self, x, derivative=False):
@@ -36,8 +40,27 @@ class HeartWood:
     return np.squeeze((np.dot(x, self.W) > self.k).astype(float))
 
   def forward(self, x):
-    y_hat = self.fastforward(x)
-    return np.array([self.true_branch() if i==1 else self.false_branch() for i in y_hat])
+    y_hat = self.fastforward(x).astype(bool)
+    try:
+      pred = [self.true_branch(x[i,:]) if y_hat[i] else self.false_branch(x[i,:]) for i in range(len(y_hat))]
+    except:
+      pred = self.true_branch(x) if y_hat else self.false_branch(x)
+    return np.array(pred)
+
+  # def predict(self, x):
+  #   return self.forward(x)
+
+  def predict(self, x):
+    # preds = np.array([self.make_prediction(x[i,:]) for i in range(x.shape[0])])
+    preds = self.forward(x)
+    return preds
+    
+  # def make_prediction(self, x):
+  #   y_hat = self.fastforward(x).astype(float)
+  #   if y_hat:
+  #     return self.true_branch(x)
+  #   else:
+  #     return self.false_branch(x)
 
   ## Traditional Training Functions
   def __info_metrics(self, y, metric='gini'):
@@ -149,7 +172,7 @@ class HeartWood:
       epoch_loss.append(np.array(batch_loss).mean())
       epoch_accuracy.append(np.array(batch_accuracy).mean())
       # print("Epoch {}: Loss: {:.6f} Accuracy: {:.2f}".format(epoch+1, epoch_loss[-1], epoch_accuracy[-1]*100))
-      pbar.set_description("E: {} | L: {:.6f} | A: {:.2f}\% ||".format(epoch+1, epoch_loss[-1], epoch_accuracy[-1]*100))
+      pbar.set_description("|| E: {} | L: {:.6f} | A: {:.2f}% ||".format(epoch+1, epoch_loss[-1], epoch_accuracy[-1]*100))
     
   def fit(self, x, y, batch_size=128, epochs=50, metric='gini'):
 
@@ -159,14 +182,14 @@ class HeartWood:
     W_back = self.W.copy()
     k_back = self.k
     y_hat = self.fastforward(x).astype(bool)
-    trues  = y[y_hat]
-    falses = y[~y_hat]
+    trues  = y[y_hat].copy()
+    falses = y[~y_hat].copy()
     uni_info_gain = parent_imp - self._impurity(trues, falses, metric=metric)
 
     self.__train(x, y, batch_size=batch_size, epochs=epochs)
     y_hat = self.fastforward(x).astype(bool)
-    trues  = y[y_hat]
-    falses = y[~y_hat]
+    trues  = y[y_hat].copy()
+    falses = y[~y_hat].copy()
 
     multi_info_gain = -float('inf')
     if len(trues) > 0 and len(falses) > 0:
@@ -177,9 +200,25 @@ class HeartWood:
       self.W = W_back
       self.k = k_back
 
+    if self.leaf:
+      y_hat = self.fastforward(x).astype(bool)
+      true_value = round(y[y_hat].mean())
+      false_value = round(y[~y_hat].mean())
+      self.true_branch  = lambda v: true_value
+      self.false_branch = lambda v: false_value
+
+
+
+    # if len(trues) <= 0 and len(falses) <= 0:
+    #   self.multidim = False
+    #   self.W = W_back
+    #   self.k = k_back
+
 if __name__ == '__main__':
-  x = np.random.uniform(low=0, high=1, size=(50000,5))
+  x = np.random.uniform(low=0, high=1, size=(10000,2))
   y = np.array([1 if j < i - 0 else 0 for i, j in zip(x[:,0],x[:,1])])
 
   hw = HeartWood(x.shape[1])
   hw.fit(x, y, 128, 100)
+
+  print('Done!')
