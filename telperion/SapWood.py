@@ -71,6 +71,9 @@ class SapWood:
       print("%s False\t:" % (indent), end="")
       self.print_tree(tree.false_branch, indent + indent)
 
+  def __prune(self):
+    pass
+
 
 if __name__ == '__main__':
 
