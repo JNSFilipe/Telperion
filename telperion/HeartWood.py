@@ -1,4 +1,5 @@
 import numpy as np
+from collections.abc import Iterable
 
 from tqdm import tqdm
 class HeartWood:
@@ -39,12 +40,20 @@ class HeartWood:
   def fastforward(self, x):
     return np.squeeze((np.dot(x, self.W) > self.k).astype(float))
 
+  # def forward(self, x):
+  #   y_hat = self.fastforward(x).astype(bool)
+  #   try:
+  #     pred = [self.true_branch(x[i,:]) if y_hat[i] else self.false_branch(x[i,:]) for i in range(len(y_hat))]
+  #   except:
+  #     pred = self.true_branch(x) if y_hat else self.false_branch(x)
+  #   return np.array(pred)
+
   def forward(self, x):
-    y_hat = self.fastforward(x).astype(bool)
-    try:
-      pred = [self.true_branch(x[i,:]) if y_hat[i] else self.false_branch(x[i,:]) for i in range(len(y_hat))]
-    except:
-      pred = self.true_branch(x) if y_hat else self.false_branch(x)
+    y_hat = self.fastforward(x).astype(bool).tolist()
+    if not isinstance(y_hat, Iterable):
+      y_hat = [y_hat]
+      x = np.expand_dims(x, axis=0)
+    pred = [self.true_branch(x[i,:]) if y_hat[i] else self.false_branch(x[i,:]) for i in range(len(y_hat))]
     return np.array(pred)
 
   # def predict(self, x):

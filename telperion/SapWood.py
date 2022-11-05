@@ -29,20 +29,24 @@ class SapWood:
         leaf = curr_depth + 1 == self.max_depth
         
         # Build a tree on the left
-        node.true_branch = self.__sow(
-            x[y_hat_idx,:], 
-            y[y_hat_idx],
-            prev_impurity=curr_impurity,
-            curr_depth=curr_depth+1,
-            leaf=leaf
-        )
-        node.false_branch = self.__sow(
-            x[~y_hat_idx,:], 
-            y[~y_hat_idx],
-            prev_impurity=curr_impurity,
-            curr_depth=curr_depth+1,
-            leaf=leaf
-        )
+        # TODO Implement min_sample_protection more elegantly
+        if len(y[y_hat_idx].tolist()) >= self.min_samples_split:
+          node.true_branch = self.__sow(
+              x[y_hat_idx,:], 
+              y[y_hat_idx],
+              prev_impurity=curr_impurity,
+              curr_depth=curr_depth+1,
+              leaf=leaf
+          )
+
+        if len(y[~y_hat_idx].tolist()) >= self.min_samples_split:
+          node.false_branch = self.__sow(
+              x[~y_hat_idx,:], 
+              y[~y_hat_idx],
+              prev_impurity=curr_impurity,
+              curr_depth=curr_depth+1,
+              leaf=leaf
+          )
 
       return node
 
@@ -57,6 +61,7 @@ class SapWood:
     if not tree:
       tree = self.root
 
+    # TODO Fix this for the case where only one of the branches is leaf
     if tree.leaf:
       x = np.zeros(1)
       print("X_"+str(np.squeeze(tree.W)), ">", tree.k)
