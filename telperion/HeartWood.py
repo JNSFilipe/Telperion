@@ -1,5 +1,6 @@
 import numpy as np
 from collections.abc import Iterable
+from sklearn.tree import DecisionTreeClassifier
 
 from tqdm import tqdm
 class HeartWood:
@@ -87,32 +88,42 @@ class HeartWood:
     
     return (wt * self.__info_metrics(trues, metric=metric) + wf * self.__info_metrics(falses, metric=metric))
 
-  def __get_best_unidimensonal_split(self, x, y, metric='gini'):
-    max_info_gain = -float('inf')
-    best_split = ()
-
+  def __get_best_unidimensonal_split(self, x, y, metric='gini', backend='sklearn'):
+    
     num_feat = x.shape[1]
 
-    parent_imp = self.__info_metrics(y, metric=metric)
+    if backend == 'sklearn' or backend == 'sklearn-dt':
+      clf = DecisionTreeClassifier(criterion=metric, max_depth=1)
+      clf.fit(x, y)
+      self.W = np.zeros((num_feat,1))
+      self.W[clf.tree_.feature[0], 0] = 1.0
+      self.k = clf.tree_.threshold[0]
+    elif backend == 'telperion':
+      max_info_gain = -float('inf')
+      best_split = ()
 
-    for f in range(num_feat):
+      parent_imp = self.__info_metrics(y, metric=metric)
 
-      split_candiadates = np.unique(x[:,f])
-      
-      for sc in split_candiadates:
-        y_hat  = x[:,f]>sc
-        trues  = y[y_hat]
-        falses = y[~y_hat]
+      for f in range(num_feat):
 
-        if len(trues) > 0 and len(falses) > 0:
-          info_gain = parent_imp - self._impurity(trues, falses, metric=metric)
-          if info_gain > max_info_gain:
-            max_info_gain = info_gain
-            best_split = (f,sc)
+        split_candiadates = np.unique(x[:,f])
+        
+        for sc in split_candiadates:
+          y_hat  = x[:,f]>sc
+          trues  = y[y_hat]
+          falses = y[~y_hat]
 
-    self.W = np.zeros((num_feat,1))
-    self.W[best_split[0], 0] = 1.0
-    self.k = best_split[1]
+          if len(trues) > 0 and len(falses) > 0:
+            info_gain = parent_imp - self._impurity(trues, falses, metric=metric)
+            if info_gain > max_info_gain:
+              max_info_gain = info_gain
+              best_split = (f,sc)
+
+      self.W = np.zeros((num_feat,1))
+      self.W[best_split[0], 0] = 1.0
+      self.k = best_split[1]
+    else:
+      raise Exception("ERROR: Unvalid backend specified")
 
   ## Backpropagation Training Functions
   def __next_batch(self, x, y, batchSize):
@@ -224,6 +235,7 @@ class HeartWood:
     #   self.k = k_back
 
 if __name__ == '__main__':
+  np.random.seed(76)
   x = np.random.uniform(low=0, high=1, size=(10000,2))
   y = np.array([1 if j < i - 0 else 0 for i, j in zip(x[:,0],x[:,1])])
 
