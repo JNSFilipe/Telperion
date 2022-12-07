@@ -225,8 +225,15 @@ class HeartWood(BaseEstimator, ClassifierMixin):
 
     if self.leaf:
       y_hat = self.fastforward(X).astype(bool)
-      true_value = round(y[y_hat].mean())
-      false_value = round(y[~y_hat].mean())
+      if len(y[y_hat]) > 0:
+        true_value = round(y[y_hat].mean())
+      else:
+        true_value = 1.0
+
+      if len(y[~y_hat]) > 0:
+        false_value = round(y[~y_hat].mean())
+      else:
+        false_value = 0.0
       self.true_branch  = lambda v: true_value
       self.false_branch = lambda v: false_value
 

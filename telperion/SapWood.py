@@ -1,25 +1,35 @@
 import numpy as np
+from sklearn.utils.multiclass import unique_labels
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 from HeartWood import HeartWood
 
-class SapWood:
-  def __init__(self, min_samples_split=2, max_depth=5):
+class SapWood(BaseEstimator, ClassifierMixin):
+  def __init__(self, min_samples_split=2, max_depth=5, imp_metric='gini', classical_backend='sklearn', lr=0.1):
     self.min_samples_split = min_samples_split
+    self.classical_backend = classical_backend
+    self.imp_metric = imp_metric
     self.max_depth = max_depth
+    self.lr = lr
 
     self.root = None
 
-  def __sow(self, x, y, curr_depth=1, prev_impurity=5000, metric='gini', leaf=False):
-    n_rows, n_cols = x.shape
+    # TODO manage estimator tags (https://scikit-learn.org/stable/developers/develop.html#estimator-tags)
+    # TODO implement Pipeline compatibility (https://scikit-learn.org/stable/developers/develop.html#pipeline-compatibility)
+    # TODO implement GridSearch compatibility (https://scikit-learn.org/stable/developers/develop.html#parameters-and-init)
+
+  def __sow(self, X, y, curr_depth=1, prev_impurity=5000, metric='gini', leaf=False, classical_backend='sklearn', lr=0.1):
+    n_rows, n_cols = X.shape
     if self.max_depth <= 1:
       leaf = True
         
     # Check to see if a node should be leaf node
     if n_rows >= self.min_samples_split:
       # Create and train new node
-      node = HeartWood(n_cols, leaf=leaf)
-      node.fit(x, y)
-      y_hat = node.fastforward(x)
+      node = HeartWood(classical_backend=classical_backend, lr=lr, leaf=leaf)
+      node.fit(X, y)
+      y_hat = node.fastforward(X)
       y_hat_idx = y_hat.astype(bool)
 
       curr_impurity = node._impurity(y[y_hat_idx], y[~y_hat_idx], metric=metric)
@@ -32,30 +42,45 @@ class SapWood:
         # TODO Implement min_sample_protection more elegantly
         if len(y[y_hat_idx].tolist()) >= self.min_samples_split:
           node.true_branch = self.__sow(
-              x[y_hat_idx,:], 
+              X[y_hat_idx,:], 
               y[y_hat_idx],
               prev_impurity=curr_impurity,
               curr_depth=curr_depth+1,
-              leaf=leaf
+              leaf=leaf,
+              metric=metric,
+              classical_backend=classical_backend,
+              lr=lr
           )
 
         if len(y[~y_hat_idx].tolist()) >= self.min_samples_split:
           node.false_branch = self.__sow(
-              x[~y_hat_idx,:], 
+              X[~y_hat_idx,:], 
               y[~y_hat_idx],
               prev_impurity=curr_impurity,
               curr_depth=curr_depth+1,
-              leaf=leaf
+              leaf=leaf,
+              metric=metric,
+              classical_backend=classical_backend,
+              lr=lr
           )
 
       return node
 
-  def fit(self, x, y, metric='gini'):
-    self.root = self.__sow(x, y, metric=metric)
+  def fit(self, X, y):
+    # Check that X and y have correct shape
+    X, y = check_X_y(X, y)
 
-  def predict(self, x):
-    y_hat = self.root.predict(x)
-    return y_hat
+    # Store the classes seen during fit
+    self.classes_ = unique_labels(y)
+
+    self.root = self.__sow(X, y, metric=self.imp_metric, classical_backend=self.classical_backend, lr=self.lr)
+
+  def predict(self, X):
+    # Check if fit has been called
+    check_is_fitted(self)
+    # Input validation
+    X = check_array(X)
+    return self.root.predict(X).squeeze()
 
   def print_tree(self, tree=None, indent=" "):
     if not tree:
@@ -63,12 +88,12 @@ class SapWood:
 
     # TODO Fix this for the case where only one of the branches is leaf
     if tree.leaf:
-      x = np.zeros(1)
+      X = np.zeros(1)
       print("X_"+str(np.squeeze(tree.W)), ">", tree.k)
       print("%s True:\t" % (indent), end="")
-      print(tree.true_branch(x))
+      print(tree.true_branch(X))
       print("%s False:\t" % (indent), end="")
-      print(tree.false_branch(x))
+      print(tree.false_branch(X))
     else:
       print("X_"+str(np.squeeze(tree.W)), ">", tree.k)
       print("%s True:\t" % (indent), end="")
@@ -82,23 +107,27 @@ class SapWood:
 
 if __name__ == '__main__':
 
-  x = np.random.uniform(low=0, high=1, size=(50000,3))
-  # y = np.array([1 if (j-0.5)**2 + (i-0.5)**2 < 0.2 else 0 for i, j in zip(x[:,0],x[:,1])])
-  y = np.array([1 if (j)**2 + (i)**2 < 1 else 0 for i, j in zip(x[:,0],x[:,1])])
+  X = np.random.uniform(low=0, high=1, size=(50000,3))
+  # y = np.array([1 if (j-0.5)**2 + (i-0.5)**2 < 0.2 else 0 for i, j in zip(X[:,0],X[:,1])])
+  y = np.array([1 if (j)**2 + (i)**2 < 1 else 0 for i, j in zip(X[:,0],X[:,1])])
 
   from sklearn.datasets import load_breast_cancer
 
   data = load_breast_cancer()
-  x = data['data']
+  X = data['data']
   y = data['target']
 
-  x = np.random.uniform(low=0, high=1, size=(10000,2))
-  y = np.array([1 if (j)**2 + (i)**2 < 0.7 else 0 for i, j in zip(x[:,0],x[:,1])])
+  X = np.random.uniform(low=0, high=1, size=(10000,2))
+  y = np.array([1 if (j)**2 + (i)**2 < 0.7 else 0 for i, j in zip(X[:,0],X[:,1])])
+
+  X = np.random.uniform(low=0, high=1, size=(10000,2))
+  y = np.array([1 if (j-0.5)**2 + (i-0.5)**2 < 0.1 else 0 for i, j in zip(X[:,0],X[:,1])])
+
 
   x = np.random.uniform(low=0, high=1, size=(10000,2))
   y = np.array([1 if (j-0.5)**2 + (i-0.5)**2 < 0.1 else 0 for i, j in zip(x[:,0],x[:,1])])
-
-  # x = np.array([
+  y = np.array([1 if (j)**2 + (i)**2 < 0.7 else 0 for i, j in zip(x[:,0],x[:,1])])
+  # X = np.array([
   #     [1, 12, 0],
   #     [1, 87, 1],
   #     [0, 44, 0],
@@ -108,14 +137,17 @@ if __name__ == '__main__':
   #   ])
   # y = np.array([1, 1, 0, 0, 1, 1])
 
-  # x = np.random.uniform(low=0, high=1, size=(50000,5))
-  # y = np.array([1 if j < i - 0 else 0 for i, j in zip(x[:,0],x[:,1])])
+  # X = np.random.uniform(low=0, high=1, size=(50000,5))
+  # y = np.array([1 if j < i - 0 else 0 for i, j in zip(X[:,0],X[:,1])])
 
-  sw = SapWood(max_depth=6)
-  sw.fit(x,y)
+  sw = SapWood(max_depth=3)
+  sw.fit(X,y)
 
-  y_hat = sw.predict(x)
+  y_hat = sw.predict(X)
 
-  sw.print_tree()
+  from sklearn.metrics import accuracy_score
+  print('Final Accuracy: {:.2f}%'.format(accuracy_score(y, sw.predict(X))*100))
+
+  # sw.print_tree()
 
   print('Done!')
