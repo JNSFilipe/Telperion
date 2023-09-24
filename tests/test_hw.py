@@ -14,7 +14,6 @@ def test_unidim():
     w = torch.Tensor([1.0, 0.0])
     b = 0.8
 
-    # np.random.seed(76)
     X = torch.Tensor(10000, 2).uniform_(0, 1)
     y = (torch.matmul(w, X.t()) > b).float().squeeze()
 
@@ -41,7 +40,6 @@ def test_multidim():
     w = torch.Tensor([3.0, 6.0])
     b = 4.5
 
-    # np.random.seed(76)
     X = torch.Tensor(10000, 2).uniform_(0, 1)
     y = (torch.matmul(w, X.t()) > b).float().squeeze()
 

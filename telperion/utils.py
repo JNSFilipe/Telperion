@@ -9,7 +9,7 @@ def accuracy(y, y_pred):
     # if not isinstance(y_pred, torch.Tensor):
     #     y_pred = torch.tensor(y_pred)
 
-    return (y == y_pred).sum()/len(y)*100
+    return (y == y_pred).float().sum()/len(y)*100
 
 
 def impurity(y):

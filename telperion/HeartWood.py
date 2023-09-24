@@ -11,8 +11,7 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 
 class HeartWood(BaseEstimator, ClassifierMixin):
-    def __init__(self, lr=0.1, leaf=True):
-        self.lr = lr
+    def __init__(self, leaf=True):
 
         self.fc = None
         # self.U = nn.Tanh()
