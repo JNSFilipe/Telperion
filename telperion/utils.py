@@ -1,5 +1,9 @@
 import torch
 from torch import nn, optim
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import ListedColormap
 
 
 def accuracy(y, y_pred):
@@ -85,3 +89,55 @@ def train_nn(model, activation, X, y, optimizer=optim.Adam, loss=nn.CrossEntropy
             print(f"Epoch {epoch + 1}/{epochs}, Loss: {average_loss:.4f}")
 
     return model
+
+
+def plot_decision_domains(X, y, classifier, resolution=0.02, margin=None, subsample=None):
+    # Set Seaborn style
+    sns.set()
+    palette = sns.color_palette("muted", n_colors=np.unique(y).shape[0])
+    cmap = ListedColormap(palette[:len(np.unique(y))])
+
+    # Get plot boundaries
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+
+    # Create a mesh grid
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, resolution),
+                         np.arange(y_min, y_max, resolution))
+
+    # Predict class for each point in the mesh grid
+    Z = classifier.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    if isinstance(Z, torch.Tensor):
+        Z = Z.detach()
+
+    # Plot decision regions using contourf
+    plt.contourf(xx, yy, Z, alpha=0.3, cmap=cmap)
+
+    # Subsample data if needed
+    if subsample:
+        indices = np.random.choice(len(X), int(
+            len(X) * subsample), replace=False)
+        X_subsampled = X[indices]
+        y_subsampled = y[indices]
+    else:
+        X_subsampled = X
+        y_subsampled = y
+
+    # Plot data points
+    for idx, cl in enumerate(np.unique(y_subsampled)):
+        plt.scatter(x=X_subsampled[y_subsampled == cl, 0],
+                    y=X_subsampled[y_subsampled == cl, 1],
+                    c=[palette[idx]],
+                    label=cl,
+                    edgecolor='black',
+                    s=100)  # Adjusted size for better visibility
+
+    if not (margin is None):
+        plt.xlim(X[:, 0].min()-margin, X[:, 0].max()+margin)
+        plt.ylim(X[:, 1].min()-margin, X[:, 1].max()+margin)
+
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature 2')
+    plt.title('Decision Regions')
+    plt.legend(loc='upper left')
