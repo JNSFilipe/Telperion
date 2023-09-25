@@ -3,7 +3,7 @@ import torch
 from torch import nn, optim
 from skorch import NeuralNetBinaryClassifier
 from skorch.callbacks import LRScheduler, EarlyStopping
-from .utils import gini, accuracy, train_nn
+from telperion.utils import gini, accuracy, train_nn
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils.multiclass import unique_labels
 from sklearn.base import BaseEstimator, ClassifierMixin

@@ -1,6 +1,6 @@
 import torch
-from .HeartWood import HeartWood
-from .SapWood import SapWood
+from telperion.HeartWood import HeartWood
+from telperion.SapWood import SapWood
 
 # TODO make inherit sklearn base class
 # TODO make all options/arguments of HeartWood available to Mallornn
