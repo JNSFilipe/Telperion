@@ -11,17 +11,12 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 
 class HeartWood(BaseEstimator, ClassifierMixin):
-    def __init__(self, leaf=True):
+    def __init__(self):
 
         self.fc = None
         # self.U = nn.Tanh()
         # self.U = nn.Hardsigmoid()
         self.U = nn.Sigmoid()
-
-        self.true_branch = lambda X: 1
-        self.false_branch = lambda X: 0
-
-        self.leaf = leaf
 
         self._multidim = False
 

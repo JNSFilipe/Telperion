@@ -3,7 +3,6 @@ from telperion.HeartWood import HeartWood
 from telperion.SapWood import SapWood
 
 # TODO make inherit sklearn base class
-# TODO make all options/arguments of HeartWood available to Mallornn
 # TODO make method to print the tree
 # TODO make method to covert tree to C++
 
@@ -14,7 +13,7 @@ class Mallorn:
         self.min_samples_leaf = min_samples
         self.root = None
 
-    def _fit(self, X, y, depth=0, verbose=0):
+    def _fit(self, X, y, lr=0.01, batch_size=128, epochs=50, metric='gini', method='both', backend='skorch', depth=0, verbose=0):
         # Base cases for recursion
         reach_max_depth = False
         not_enough_samples = False
@@ -25,7 +24,8 @@ class Mallorn:
         if not reach_max_depth:
             # Train a HeartWood (stump) on the data
             stump = HeartWood()
-            stump.fit(X, y)
+            stump.fit(X, y, lr=lr, batch_size=batch_size, epochs=epochs,
+                      metric=metric, method=method, backend=backend, verbose=verbose)
 
             # Split data based on stump's decision
             predictions = stump.predict(X)
@@ -43,9 +43,16 @@ class Mallorn:
                 node = SapWood()
                 node.stump = stump
                 node.left = self._fit(
-                    X[left_indices], y[left_indices], depth + 1)
+                    X[left_indices], y[left_indices],
+                    lr=lr, batch_size=batch_size, epochs=epochs,
+                    metric=metric, method=method, backend=backend,
+                    depth=depth+1, verbose=verbose)
+
                 node.right = self._fit(
-                    X[right_indices], y[right_indices], depth + 1)
+                    X[right_indices], y[right_indices],
+                    lr=lr, batch_size=batch_size, epochs=epochs,
+                    metric=metric, method=method, backend=backend,
+                    depth=depth+1, verbose=verbose)
 
         if reach_max_depth or not_enough_samples:
             if verbose > 2:
@@ -61,8 +68,11 @@ class Mallorn:
 
         return node
 
-    def fit(self, X, y, depth=0):
-        self.root = self._fit(X, y, depth=depth)
+    def fit(self, X, y, lr=0.01, batch_size=128, epochs=50, metric='gini', method='both', backend='skorch', verbose=0):
+        self.root = self._fit(X, y,
+                              lr=lr, batch_size=batch_size, epochs=epochs,
+                              metric=metric, method=method, backend=backend,
+                              depth=0, verbose=verbose)
 
     def _predict_single(self, node, x):
         if node.is_leaf:
