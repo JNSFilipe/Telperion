@@ -34,3 +34,20 @@ def test_unidim():
     print('SKl DTs Accuracy:\t {:.2f}%'.format(acc_dt))
 
     assert acc_ml >= acc_dt
+
+
+def test_print():
+    max_depth = 5
+    w = torch.Tensor([1.0, 1.0])
+    b = 0.8
+
+    X = torch.Tensor(10000, 2).uniform_(0, 1)
+    y = (torch.matmul(w, X.square().t()) > b).float().squeeze()
+
+    ml = Mallorn(max_depth=max_depth)
+    ml.fit(X, y)
+
+    ml.print_tree()
+
+    # Check program reaached here
+    assert True
