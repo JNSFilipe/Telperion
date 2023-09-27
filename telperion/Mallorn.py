@@ -8,7 +8,7 @@ from telperion.SapWood import SapWood
 
 
 class Mallorn:
-    def __init__(self, max_depth=3, min_samples=2):
+    def __init__(self, max_depth=3, min_samples=5):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples
         self.root = None
@@ -18,7 +18,8 @@ class Mallorn:
         reach_max_depth = False
         not_enough_samples = False
 
-        if depth == self.max_depth or len(y) <= self.min_samples_leaf:
+        # 5 is the minimum number of samples required by skorch
+        if depth == self.max_depth or len(y) <= max(self.min_samples_leaf, 5):
             reach_max_depth = True
 
         if not reach_max_depth:
@@ -35,7 +36,8 @@ class Mallorn:
                 predictions) if pred == 1]
 
             # If stump can't split data further, create a leaf node
-            if len(left_indices) < 2 or len(right_indices) < 2:
+            # 5 is the minimum number of samples required by skorch
+            if len(left_indices) < 5 or len(right_indices) < 5:
                 not_enough_samples = True
 
             if not not_enough_samples:
@@ -56,7 +58,7 @@ class Mallorn:
 
         if reach_max_depth or not_enough_samples:
             if verbose > 2:
-                if (reach_max_depth):
+                if reach_max_depth:
                     print("Stopped at depth {depth} due to reach max depth")
                 elif not_enough_samples:
                     print("Stopped at depth {depth} due to not enough samples")
@@ -85,3 +87,35 @@ class Mallorn:
 
     def predict(self, X):
         return torch.Tensor([self._predict_single(self.root, x) for x in X])
+
+    def print_tree(self, node=None, depth=0, prefix="Root:"):
+        if node is None:
+            node = self.root
+
+        # Print the current node
+        if node.is_leaf:
+            print(f"{'  ' * depth}{prefix} Leaf => Class: {node.value}")
+        else:
+            # print(f"{'  ' * depth}{prefix} Decision Stump (Feature Index, Threshold)")
+            w = node.stump.fc.weight.data.squeeze().tolist()
+            b = node.stump.fc.bias.data.tolist()[0]
+            print(
+                f"{'  ' * depth}{prefix} Decision Stump ( {[round(i,2) for i in w]} * X > {b:.2f} )")
+
+        # Recursively print left and right children
+        if node.left:
+            self.print_tree(node.left, depth + 1, "Left:  ")
+        if node.right:
+            self.print_tree(node.right, depth + 1, "Right: ")
+
+
+if __name__ == "__main__":
+    max_depth = 5
+    w = torch.Tensor([1.0, 1.0])
+    b = 0.8
+
+    X = torch.Tensor(10000, 2).uniform_(0, 1)
+    y = (torch.matmul(w, X.square().t()) > b).float().squeeze()
+
+    ml = Mallorn(max_depth=max_depth)
+    ml.fit(X, y)
