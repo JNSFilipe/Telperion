@@ -51,6 +51,9 @@ def gini(y, y_pred):
 
     gini_index = weight_left * gini_left + weight_right * gini_right
 
+    if torch.isnan(gini_index):
+        gini_index = torch.tensor(1)
+
     return gini_index
 
 
