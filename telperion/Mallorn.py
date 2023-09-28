@@ -30,14 +30,12 @@ class Mallorn:
 
             # Split data based on stump's decision
             predictions = stump.predict(X)
-            left_indices = [i for i, pred in enumerate(
-                predictions) if pred == 0]
-            right_indices = [i for i, pred in enumerate(
-                predictions) if pred == 1]
+            left_indices = predictions == 0
+            right_indices = predictions == 1
 
             # If stump can't split data further, create a leaf node
             # 5 is the minimum number of samples required by skorch
-            if len(left_indices) < 5 or len(right_indices) < 5:
+            if len(y[left_indices]) < 5 or len(y[right_indices]) < 5:
                 not_enough_samples = True
 
             if not not_enough_samples:
@@ -70,11 +68,14 @@ class Mallorn:
 
         return node
 
-    def fit(self, X, y, lr=0.01, batch_size=128, epochs=50, metric='gini', method='both', backend='skorch', verbose=0):
+    def fit(self, X, y, lr=0.01, batch_size=128, epochs=50, metric='gini', method='both', backend='skorch', prune=True, verbose=0):
         self.root = self._fit(X, y,
                               lr=lr, batch_size=batch_size, epochs=epochs,
                               metric=metric, method=method, backend=backend,
                               depth=0, verbose=verbose)
+
+        if prune:
+            self.prune_tree()
 
     def _predict_single(self, node, x):
         if node.is_leaf:
@@ -107,6 +108,33 @@ class Mallorn:
             self.print_tree(node.left, depth + 1, "Left:  ")
         if node.right:
             self.print_tree(node.right, depth + 1, "Right: ")
+
+    def prune_tree(self, node=None):
+        """
+        Prune the tree by removing branches where both left and right children 
+        are leaf nodes with the same value.
+        """
+        if node is None:
+            node = self.root
+
+        # Base case: if the node is a leaf, return its value
+        if node.is_leaf:
+            return node.value
+
+        # Recursively prune left and right children
+        left_value = self.prune_tree(node.left)
+        right_value = self.prune_tree(node.right)
+
+        # If both children are leaves and have the same value, prune them
+        if left_value == right_value and left_value is not None:
+            node.is_leaf = True
+            node.value = left_value
+            node.left = None
+            node.right = None
+            node.stump = None
+            return node.value
+
+        return None
 
 
 if __name__ == "__main__":
