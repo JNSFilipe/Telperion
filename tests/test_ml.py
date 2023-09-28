@@ -51,3 +51,36 @@ def test_print():
 
     # Check program reaached here
     assert True
+
+
+def test_prunning():
+    max_depth = 3
+    b = 0.7
+
+    X = torch.Tensor(10000, 2).uniform_(0, 1)
+    y = torch.Tensor([1 if (j)**2 + (i)**2 < b else 0 for i,
+                     j in zip(X[:, 0], X[:, 1])])
+
+    ml = Mallorn(max_depth=max_depth)
+    ml.fit(X, y, prune=False, verbose=0)
+    y_pred = ml.predict(X)
+    acc = accuracy(y, y_pred)
+    ml.print_tree()
+
+    print('\n\n')
+
+    ml.prune_tree()
+    y_pred = ml.predict(X)
+    acc_pred = accuracy(y, y_pred)
+    ml.print_tree()
+
+    assert acc == acc_pred
+
+    print('\n\n')
+    ml = Mallorn(max_depth=max_depth)
+    ml.fit(X, y, prune=True, verbose=0)
+    y_pred = ml.predict(X)
+    acc_pred_arg = accuracy(y, y_pred)
+    ml.print_tree()
+
+    assert acc == pytest.approx(acc_pred_arg, rel=0.05)
