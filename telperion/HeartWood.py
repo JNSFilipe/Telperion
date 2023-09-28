@@ -80,7 +80,7 @@ class HeartWood(BaseEstimator, ClassifierMixin):
 
             m = NeuralNetBinaryClassifier(
                 self.fc, max_epochs=epochs, batch_size=batch_size, lr=lr, optimizer=opt,
-                callbacks=[LRScheduler(), EarlyStopping()])
+                callbacks=[LRScheduler(), EarlyStopping()], verbose=verbose)
             m.fit(X, y)
 
         else:
@@ -121,9 +121,12 @@ class HeartWood(BaseEstimator, ClassifierMixin):
                 print("Unidim Accuracy: {:.2f}%".format(accuracy(y, y_pred)))
 
         if method == 'multidim' or method == 'both':
-            self.__train_multidim(
-                X, y, lr=lr, batch_size=batch_size, epochs=epochs, backend=backend, verbose=verbose)
-            self._multidim = True
+            if len(y[y == 1]) > 5 and len(y[y == 0]) > 5:
+                self.__train_multidim(
+                    X, y, lr=lr, batch_size=batch_size, epochs=epochs, backend=backend, verbose=verbose)
+                self._multidim = True
+            elif method == 'multidim' or verbose > 0:
+                print("Too few samples of one or either class to attempt multidim")
 
         if method == 'both':
             y_pred = self.predict(X)
