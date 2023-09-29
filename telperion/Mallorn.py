@@ -101,7 +101,7 @@ class Mallorn:
             w = node.stump.fc.weight.data.squeeze().tolist()
             b = node.stump.fc.bias.data.tolist()[0]
             print(
-                f"{'  ' * depth}{prefix} Decision Stump ( {[round(i,2) for i in w]} * X > {b:.2f} )")
+                f"{'  ' * depth}{prefix} Decision Stump ( {[round(i,2) for i in w]} * X > {-b:.2f} )")
 
         # Recursively print left and right children
         if node.left:
@@ -136,14 +136,42 @@ class Mallorn:
 
         return None
 
+    def to_cpp(self, node=None, depth=0):
+        """
+        Convert the trained tree into a C++ function.
+        """
+        if node is None:
+            node = self.root
 
-if __name__ == "__main__":
-    max_depth = 5
-    w = torch.Tensor([1.0, 1.0])
-    b = 0.8
+        indent = '    ' * (depth+1)
+        cpp_code = ""
 
-    X = torch.Tensor(10000, 2).uniform_(0, 1)
-    y = (torch.matmul(w, X.square().t()) > b).float().squeeze()
+        # If the node is a leaf, return its value
+        if node.is_leaf:
+            cpp_code += f"{indent}return {int(node.value)};\n"
+            return cpp_code
 
-    ml = Mallorn(max_depth=max_depth)
-    ml.fit(X, y)
+        # Generate the decision code for the stump
+        w = node.stump.fc.weight.data.squeeze().tolist()
+        b = node.stump.fc.bias.data.tolist()[0]
+        # Skip indices with w[i] == 0
+        decision_terms = [
+            f"({w[i]} * x[{i}])" for i in range(len(w)) if w[i] != 0]
+        decision_code = " + ".join(decision_terms)
+
+        cpp_code += f"{indent}if ({decision_code} > {-b}) {{\n"
+        cpp_code += self.to_cpp(node.right, depth + 1)
+        cpp_code += f"{indent}}} else {{\n"
+        cpp_code += self.to_cpp(node.left, depth + 1)
+        cpp_code += f"{indent}}}\n"
+
+        return cpp_code
+
+    def generate_cpp_function(self):
+        """
+        Generate a C++ function from the trained tree.
+        """
+        function_header = "int predict(const std::vector<float>& x) {\n"
+        function_body = self.to_cpp()
+        function_footer = "}\n"
+        return function_header + function_body + function_footer
