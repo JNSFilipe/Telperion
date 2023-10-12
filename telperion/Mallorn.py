@@ -80,7 +80,7 @@ class Mallorn:
     def _predict_single(self, node, x):
         if node.is_leaf:
             return node.value
-        decision = node.stump.predict([x])
+        decision = node.stump.predict(x)
         if decision == 0:
             return self._predict_single(node.left, x)
         else:
