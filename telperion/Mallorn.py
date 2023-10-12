@@ -136,7 +136,7 @@ class Mallorn:
 
         return None
 
-    def to_cpp(self, node=None, depth=0):
+    def to_cpp(self, node=None, depth=0, standalone=True):
         """
         Convert the trained tree into a C++ function.
         """
@@ -148,7 +148,10 @@ class Mallorn:
 
         # If the node is a leaf, return its value
         if node.is_leaf:
-            cpp_code += f"{indent}return {int(node.value)};\n"
+            if standalone:
+                cpp_code += f"{indent}return {int(node.value)};\n"
+            else:
+                cpp_code += f"{indent}votes.push_back({int(node.value)});\n"
             return cpp_code
 
         # Generate the decision code for the stump
@@ -160,9 +163,9 @@ class Mallorn:
         decision_code = " + ".join(decision_terms)
 
         cpp_code += f"{indent}if ({decision_code} > {-b}) {{\n"
-        cpp_code += self.to_cpp(node.right, depth + 1)
+        cpp_code += self.to_cpp(node.right, depth + 1, standalone=standalone)
         cpp_code += f"{indent}}} else {{\n"
-        cpp_code += self.to_cpp(node.left, depth + 1)
+        cpp_code += self.to_cpp(node.left, depth + 1, standalone=standalone)
         cpp_code += f"{indent}}}\n"
 
         return cpp_code

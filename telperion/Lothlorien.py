@@ -42,3 +42,28 @@ class Lothlorien:
     def score(self, X, y):
         y_pred = self.predict(X)
         return (y_pred == y).float().mean().item()
+
+    def generate_cpp_function(self, threshold=0.5, add_libs=True):
+        """
+        Generate a C++ function from the trained forest.
+        """
+        indent = '    '
+
+        libs = ""
+        if add_libs:
+            libs += "#include <vector>\n"
+            libs += "#include <iostream>\n"
+            libs += "#include <numeric>\n\n"
+
+        function_header = f"int predict(const std::vector<float>& x, float threshold={threshold}) {{\n"
+        function_header += f"{indent}std::vector<int> votes;\n"
+
+        function_body = ""
+        for t in self.trees:
+            function_body += t.to_cpp(standalone=False)
+
+        function_footer = f"{indent}float average = accumulate(votes.begin(), votes.end(), 0.0)/((float)votes.size());\n"
+        function_footer += f"{indent}return average >= threshold ? 1 : 0;\n"
+        function_footer += "}\n"
+
+        return libs + function_header + function_body + function_footer
