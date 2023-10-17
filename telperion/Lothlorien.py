@@ -25,12 +25,15 @@ class Lothlorien:
         tree.fit(X_sample, y_sample, **kwargs)
         return tree
 
-    def fit(self, X, y, n_jobs=-1, **kwargs):
-        with tqdm(total=self.n_estimators, desc="Training Trees") as pbar:
-            self.trees = Parallel(n_jobs=n_jobs, prefer="threads")(
-                delayed(self._train_tree)(X, y, **kwargs) for _ in range(self.n_estimators)
-            )
-            pbar.update()
+    def fit(self, X, y, parallel=True, n_jobs=-1, **kwargs):
+        if parallel:
+            with tqdm(total=self.n_estimators, desc="Training Trees") as pbar:
+                self.trees = Parallel(n_jobs=n_jobs, prefer="threads")(
+                    delayed(self._train_tree)(X, y, **kwargs) for _ in range(self.n_estimators)
+                )
+                pbar.update()
+        else:
+            self.trees = [self._train_tree(X, y, **kwargs) for _ in tqdm(range(self.n_estimators))]
 
     def predict(self, X):
         # Get predictions from all trees
